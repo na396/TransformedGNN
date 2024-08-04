@@ -1,0 +1,50 @@
+{
+  "use_gpu": false,
+  "path":"Y:\\Root\\Study\\PhD - All\\Contributions\\Paper 5 - GNN - TrainableFeatures\\",
+
+  "graph_data": {
+    "train_val": {"train_ratio": 0.6, "val_ratio": 0.2, "train_num": null, "val_num": null},
+    "final_split_method" : "original",
+    "remove_self_loop" : true,
+    "directed_to_undirected" : true,
+    "reduce_to_largest_cc" : true,
+    "sel_dim_in_multiple_trains" : 0,
+    "verbose" : true
+  },
+
+  "spectral_params" : {
+              "mode": "non-symmetric",
+              "num_sel_first_col":200,
+              "drop_first_col": true,
+              "vectorized": true,
+              "load_cache": false,
+              "save_cache": true
+
+              },
+
+  "deepwalk_params" :{
+                "embedding_dim":128,
+                "learning_rate":0.01,
+                "n_epoch":10,
+                "batch_size":128,
+                "load_cache":false,
+                "save_cache": true
+              },
+
+  "model_params": {
+    "hidden_dim":[2, 128],
+    "add_relu":true,
+    "bias":true,
+    "init":"xavier",
+    "normalize":true,
+    "add_self_loops":null,
+    "dropout":0.3
+  },
+
+  "hyperparam_param": {
+    "learning_rate": 5e-4,
+    "weight_decay": 0,
+    "number_epochs": 3000
+  }
+}
+
