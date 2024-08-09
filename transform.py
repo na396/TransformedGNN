@@ -360,8 +360,16 @@ def standardization(graph: Data) -> Data:
     :return:
     """
     x = graph.x
-    n1 = x.size()
+    m1 = x.size()
+    drops = x.std(dim=0, keepdim=True)
+    keep_inds = (drops != 0).nonzero()[:, 1]
+    print(f'number of non-zero std columns: {keep_inds.size()}')
+    print(f'number of zero std columns: {x.size(1) - keep_inds.size(0)}')
+    x = x[:, keep_inds]
+    m2 = x.size()
+    print(f"{m1} => {m2}")
 
+    n1 = x.size()
     means = x.mean(dim=0, keepdim=True)
     stds = x.std(dim=0, keepdim=True)
     x = (x - means) / stds
@@ -534,13 +542,25 @@ def restricted_generalized_eigenvectors(
     X = graph.x
     dt_x = X.dtype
     n1 = X.size()
+
+    ans = X.sum(0)
+    keep_inds = (ans != 0).nonzero().squeeze()
+
+    print(f'number of non-zero norm2 columns: {keep_inds.size(0)}')
+    print(f'number of zero norm2  columns: {X.size(1) - keep_inds.size(0)}')
+
+    X = X[:, keep_inds]
+    n2 = X.size()
+    print(f'{n1} => {n2}')
+
+    # Ensure X is orthonormal
+    X = X.cpu().detach().numpy()
     rnk = matrix_rank(X)
+    n1 = X.shape
 
     print(f'X rank: {rnk}')
     print(f'X dims: {n1}')
 
-    # Ensure X is orthonormal
-    X = X.cpu().detach().numpy()
     Q, R = qr(X, mode='economic')
     Q = Q[:, :rnk]
 
@@ -562,7 +582,7 @@ def restricted_generalized_eigenvectors(
     x = Q @ x
     x = d_standardization(x, d)
     if normalize:
-        x = devide_by_norm(x)
+        x = divide_by_row_norm(x=x)
 
     # Sort eigenvalues and eigenvectors in descending order
     idx = lambda_v.argsort()[::-1]
@@ -588,13 +608,39 @@ def restricted_generalized_eigenvectors(
     return graph
 
 ############################
-def devide_by_norm(x):
+def divide_by_row_norm(x):
+
     ans = x.sum(axis=1)
-    inds = np.where(ans==0)
+    inds = np.where(ans == 0)
     x[inds, :] = 1
     x = x / np.linalg.norm(x, ord=None, axis=1, keepdims=True)
     x[inds, :] = 0
+
     return x
+
+############################
+def divide_by_col_norm(graph: Data, device):
+
+    x = graph.x
+    n1 = x.size()
+    ans = x.sum(0)
+    keep_inds = (ans != 0).nonzero().squeeze()
+
+    print(f'number of non-zero norm2 columns: {keep_inds.size(0)}')
+    print(f'number of zero norm2  columns: {x.size(1) - keep_inds.size(0)}')
+
+    x = x[:, keep_inds]
+    n2 = x.size()
+    x = x.cpu().detach().numpy()
+    x = x/ np.linalg.norm(x, ord=None, axis=0, keepdims=True)
+    print(f'{n1} => {n2}')
+
+    graph.x = torch.from_numpy(x).to(device)
+
+    graph = update_attribute(graph=graph)
+
+    return graph
+
 
 ############################
 def Bfun(x, d):
@@ -612,6 +658,7 @@ def d_standardization(x, d):
     return x
 
 
+############################
 ############################
 # def topological_overlap_matrix(graph: Data) -> Data:
 #

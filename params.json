@@ -1,6 +1,6 @@
 {
   "use_gpu": false,
-  "path":"Y:\\Root\\Study\\PhD - All\\Contributions\\Paper 5 - GNN - TrainableFeatures\\",
+  "path":"Y:\\Root\\Study\\PhD_Research\\TransformedGNN\\",
 
   "graph_data": {
     "train_val": {"train_ratio": 0.6, "val_ratio": 0.2, "train_num": null, "val_num": null},

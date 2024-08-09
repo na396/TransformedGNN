@@ -13,12 +13,17 @@ globals().clear()
 import gc
 import json
 
-import pandas as pd
 import torch
 from classes import DynamicGCNconv
 from graph_data import GraphData
 from train_test import train, test
-from transform import standard_normal, standardization, krylov_reEmbed, restricted_generalized_eigenvectors
+from transform import (
+    standard_normal,
+    standardization,
+    krylov_reEmbed,
+    restricted_generalized_eigenvectors,
+    divide_by_col_norm
+)
 from utils import gpu_setup, plot_epoch, epoch_info, check_directory
 
 ######################################################################################################################## params
@@ -43,17 +48,14 @@ torch.manual_seed(222)
 
 # graph_names = ["Cora", "CiteSeer", "PubMed", "WikiCs", "ogbn-arxiv", "ogbn-products"]
 graph_names = [
-    # "Cora",
-    # "CiteSeer",
-    # "PubMed",
+    "Cora",
+    "CiteSeer",
+    "PubMed",
     "ogbn-arxiv"
 ]
 
 ############################################################
 for graph_name in graph_names:
-
-    global_epoch_df = epoch_info()
-    global_split_df = epoch_info()
 
     ############ graph
     graph_data = GraphData(
@@ -63,22 +65,32 @@ for graph_name in graph_names:
     )
     graph = graph_data.get_graph()
     graph = graph.to(device)
-    # graph2 = graph.__copy__()
+    graph2 = graph.__copy__()
 
     for use_transform in [
-        'original',
-        'normal',
-        'normal_standard',
-        # 'generalized_eigenvectors',
-        # 'row_normalized_generalized_eigenvectors'
+        # 'original',
+        # 'original_standard',
+        # 'original_norm2',
+        # 'normal',
+        # 'normal_standard',
+        'generalized_eigenvectors',
+        'row_normalized_generalized_eigenvectors'
     ]:
         print("###############################################")
         print(f'{graph_name} {use_transform}: staring...')
 
-        # graph = graph2.__copy__()
+        graph = graph2.__copy__()
 
         if use_transform == 'original':
             model_mode = 'original'
+
+        elif use_transform == 'original_standard':
+            graph = standardization(graph=graph)
+            model_mode = 'original_standard'
+
+        elif use_transform == 'original_norm2':
+            graph = divide_by_col_norm(graph=graph, device=device)
+            model_mode = 'original_norm2'
 
         elif use_transform == 'normal':
             graph = standard_normal(graph=graph, device=device)
@@ -90,6 +102,7 @@ for graph_name in graph_names:
             model_mode = 'standardized_normal'
 
         elif use_transform == 'generalized_eigenvectors':
+            graph = standardization(graph)
             graph = restricted_generalized_eigenvectors(
                 graph=graph,
                 device=device,
@@ -98,6 +111,7 @@ for graph_name in graph_names:
             model_mode = 'generalized_eigenvectors'
 
         elif use_transform == 'row_normalized_generalized_eigenvectors':
+            graph = standardization(graph)
             graph = restricted_generalized_eigenvectors(
                 graph=graph,
                 device=device,
@@ -192,13 +206,6 @@ for graph_name in graph_names:
         check_directory(cap)
         torch.save(saved, f'{cap}{graph.name}_GCNconv_{model_mode}.pt')
 
-        global_epoch_df = pd.concat([global_epoch_df, local_epoch_df], ignore_index=True)
-        global_split_df = pd.concat([global_split_df, local_split_df], ignore_index=True)
-
         print(f'{graph_name} {use_transform}: Done!')
         print("###############################################")
         print("\n\n")
-
-cap = f'{params["path"]}Result\\'
-torch.save(global_epoch_df, f'{cap}global_epoch_df_1.pt')
-torch.save(global_split_df, f'{cap}global_split_df_1.pt')

@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from utils import check_directory
 
-path= "Y:\\Root\\Study\\PhD - All\\Contributions\\Paper 5 - GNN - TrainableFeatures\\"
+path= "Y:\\Root\\Study\\PhD_Research\\TransformedGNN\\"
 cols = [
     'training_loss',
     'validation_loss',
@@ -27,17 +27,42 @@ plt_cols = [
 def read_df(graph_name):
     original = torch.load(f'{path}Result\\{graph_name}\\{graph_name}_GCNconv_original.pt',
                           map_location=torch.device('cpu'))['epoch_df']
-    original['model_name'] = f'{graph_name}_original'
+    original['model_name'] = f'X'
 
     normal = torch.load(f'{path}Result\\{graph_name}\\{graph_name}_GCNconv_normal.pt',
                         map_location=torch.device('cpu'))['epoch_df']
-    normal['model_name'] = f'{graph_name}_normal'
+    normal['model_name'] = f'X * R'
 
     stan_normal = torch.load(f'{path}Result\\{graph_name}\\{graph_name}_GCNconv_standardized_normal.pt',
                              map_location=torch.device('cpu'))['epoch_df']
-    stan_normal['model_name'] = f'{graph_name}_standardized_normal'
+    stan_normal['model_name'] = f'S(X * R)'
 
-    df = pd.concat([original, normal, stan_normal], ignore_index=True)
+    orig_stand = torch.load(f'{path}Result\\{graph_name}\\{graph_name}_GCNconv_original_standard.pt',
+                             map_location=torch.device('cpu'))['epoch_df']
+    orig_stand['model_name'] = f'S(X)'
+
+    orig_norm2 = torch.load(f'{path}Result\\{graph_name}\\{graph_name}_GCNconv_original_norm2.pt',
+                             map_location=torch.device('cpu'))['epoch_df']
+    orig_norm2['model_name'] = f'N_Col(X)'
+
+    orig_eg = torch.load(f'{path}Result\\{graph_name}\\{graph_name}_GCNconv_generalized_eigenvectors.pt',
+                            map_location=torch.device('cpu'))['epoch_df']
+    orig_eg['model_name'] = f'E(X)'
+
+    orig_egn = torch.load(f'{path}Result\\{graph_name}\\{graph_name}_GCNconv_row_normalized_generalized_eigenvectors.pt',
+                         map_location=torch.device('cpu'))['epoch_df']
+    orig_egn['model_name'] = f'N_Row(E(X))'
+
+
+    df = pd.concat([
+        original,
+        normal,
+        stan_normal,
+        orig_stand,
+        orig_norm2,
+        orig_eg,
+        orig_egn,
+    ], ignore_index=True)
     df = df.convert_dtypes()
     return df
 
@@ -100,15 +125,22 @@ def single_plot(df, col, epoch_col, bestepoch, graph_name, keep, show):
     models = df['model_name'].unique()
     plt.figure(figsize=(15, 12))  # width height
     plt.rcParams.update({'font.size': 25})
+    cmap = plt.get_cmap('tab10')
 
-    for model in models:
+    for i, model in enumerate(models):
         df_model = df[df['model_name'] == model]
         df_model = df_model[df_model[epoch_col] <= bestepoch[model]]
 
         val_pos = bestepoch[model]
         val_opt = df_model[col][df_model[epoch_col] == val_pos].values[0]
 
-        plt.plot(df_model[epoch_col], df_model[col], label=f'{model}')
+        plt.plot(
+            df_model[epoch_col],
+            df_model[col],
+            linewidth=2.2,
+            label=f'{model}',
+            color=cmap(i)
+        )
 
         plt.annotate(
             f'{val_opt:.2f}',
@@ -122,7 +154,9 @@ def single_plot(df, col, epoch_col, bestepoch, graph_name, keep, show):
     plt.title(f"{graph_name} - {col} \n ", fontsize=40)
     plt.xlabel(epoch_col, fontsize=30)
     plt.ylabel(col, fontsize=30)
-    plt.legend(fontsize=25)
+    lg = plt.legend(fontsize=25)
+    for line in lg.get_lines():
+        line.set_linewidth(4.0)
 
     if keep:
         check_directory(f"{path}Result\\{graph_name}\\per_col\\")
